@@ -15,7 +15,8 @@
 * **Detalhamento do Hardware:** Veja a atribuição completa de pinos, sensores, regras de segurança elétrica e drivers NPN no arquivo [`HARDWARE.md`](HARDWARE.md).
 
 ## Mídias e Materiais
-* **Fotos e Legendas:**
-  * `fotos/apresentando_maquete_iot.jpeg`: Demonstração da interface web e controle da maquete para os visitantes.
+![Demonstração da maquete IoT](fotos/apresentando_maquete_iot.jpeg)
+
+Registro do estande de Sistemas Embarcados e IoT durante o Mundo SENAI 2026, destacando a maquete de automação residencial e a equipe apresentadora.
 
 </div>
