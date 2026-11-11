@@ -3,7 +3,7 @@
 # Feedbacks do Projeto - Sistemas Embarcados e IoT
 
 ## O que os visitantes, colegas e docentes disseram..
-* **Visitante / Colega:** "Adorei a apresentação e o projeto de vocês. Ficou muito bom, parabéns! Adorei o varal, quero um na minha casa também.."
+* **Visitante / Colega:** "Adorei a apresentação e o projeto de vocês. Ficou muito bom, parabéns! Adorei o varal, quero um na minha casa também."
 * **Docente / Orientador:** "Melhor ano de Mundo SENAI que já vi!"
 
 ## O que funcionou bem..
