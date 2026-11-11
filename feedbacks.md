@@ -4,7 +4,7 @@
 
 ## O que os visitantes, colegas e docentes disseram..
 * **Visitante / Colega:** "Adorei a apresentação e o projeto de vocês. Ficou muito bom, parabéns! Adorei o varal, quero um na minha casa também."
-* **Docente / Orientador:** "Melhor ano de Mundo SENAI que já vi!"
+* **Docente / Orientador:** "Foi o melhor ano de Mundo SENAI que eu já vi!"
 
 ## O que funcionou bem..
 * A interação prática onde o público podia tocar nos botões da página web para acionar as residências presentes na maquete.
