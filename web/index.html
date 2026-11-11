@@ -1,0 +1,902 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquete IoT</title>
+<style>
+:root{
+  --papel:#f6f7f4; --tinta:#1e2830; --tinta-2:#55626c; --linha:#c5ccd1; --concreto:#e4e7ea;
+  --mdf:#d8bc98; --ocre:#d58f22; --cinza:#9aa3aa;
+  --luz:#ffc531; --luz-tinta:#6e4d00; --agua:#1f6fd1; --verde:#1e8a4c; --alarme:#cf3127; --calor:#e0662f;
+  --fonte:Bahnschrift,"DIN Alternate","DIN Next","Roboto Condensed","Arial Narrow","Segoe UI",sans-serif;
+  --traco:2px solid var(--tinta);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font:18px/1.35 var(--fonte);background:var(--papel);color:var(--tinta);overflow:hidden;
+  -webkit-tap-highlight-color:transparent;user-select:none;font-variant-numeric:tabular-nums}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--agua);outline-offset:3px}
+.sprite{position:absolute;width:0;height:0;overflow:hidden}
+.ic{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+h1,h2,h3{font-stretch:semi-condensed;font-weight:600;margin:0}
+
+/* folha: moldura dupla de prancha */
+.folha{position:fixed;inset:12px;border:var(--traco);display:grid;grid-template-columns:minmax(0,1fr) 360px}
+.folha::after{content:"";position:absolute;inset:4px;border:1px solid var(--tinta);pointer-events:none}
+
+/* ---------- planta ---------- */
+.planta{position:relative;min-height:0;padding:12px 8px 8px 14px;
+  background-image:linear-gradient(var(--concreto) 1px,transparent 1px),linear-gradient(90deg,var(--concreto) 1px,transparent 1px);
+  background-size:24px 24px;background-position:-1px -1px}
+.planta svg{width:100%;height:100%;display:block}
+.carimbo .nota p{margin:0 0 12px;font-size:17px;color:var(--tinta-2)}
+.legenda-t{font-size:14px;fill:var(--tinta)}
+.legenda-t .cod{font-weight:700}
+
+.casa{cursor:pointer;outline:none}
+.casa .moldura{fill:transparent;stroke:var(--agua);stroke-width:3;opacity:0;transition:opacity .15s}
+.casa:hover .moldura,.casa:focus-visible .moldura{opacity:1}
+.chamada circle{fill:var(--papel);stroke:var(--tinta);stroke-width:2.5}
+.chamada text{font-size:22px;font-weight:700;text-anchor:middle;fill:var(--tinta)}
+.nome{font-size:26px;font-weight:600;font-stretch:semi-condensed;fill:var(--tinta)}
+.rotulo{font-size:16px;fill:var(--tinta-2)}
+.rotulo-forte{font-size:17px;fill:var(--tinta);font-weight:600}
+.pav{font-size:15px;font-weight:600;fill:var(--tinta-2)}
+
+.piso-casa{fill:#efe2cf}
+.saia-casa{fill:none;stroke:var(--ocre);stroke-width:3}
+.piso-sobrado{fill:#eceeef}
+.piso-garagem{fill:var(--concreto)}
+.parede{fill:none;stroke:var(--tinta);stroke-width:7;stroke-linecap:square}
+.parede-fina{fill:none;stroke:var(--tinta);stroke-width:2}
+.janela{stroke:var(--papel);stroke-width:4}
+.janela-linha{stroke:var(--tinta);stroke-width:1.5}
+.escuridao{fill:#0f1c2b;transition:opacity .4s}
+.brilho{opacity:0;transition:opacity .35s}
+.brilho.on{opacity:1}
+.viga{fill:#b07a45}
+.led-g{fill:var(--papel);stroke:var(--tinta);stroke-width:1.5;transition:fill .3s}
+.led-g.on{fill:var(--luz)}
+.cone{fill:var(--verde);opacity:.08;transition:opacity .3s}
+.cone.ativo{opacity:.28}
+.carro{transition:transform .5s ease,opacity .5s}
+
+/* símbolos: quadrado = carga, círculo = sensor */
+.mk .fundo{fill:var(--papel);stroke:var(--tinta);stroke-width:2;transition:fill .2s}
+.mk .ic{color:var(--tinta);stroke-width:2}
+.mk text{font-size:14px;font-weight:700;fill:var(--tinta);text-anchor:middle}
+.mk.carga.on .fundo{fill:var(--luz)}
+.mk.sensor.ativo .fundo{fill:var(--cs)}
+.mk.sensor.ativo .ic{color:#fff}
+
+/* ---------- carimbo ---------- */
+.carimbo{border-left:var(--traco);display:flex;flex-direction:column;min-height:0;margin:5px 5px 5px 0}
+.carimbo>section{border-bottom:var(--traco);padding:14px 18px}
+.carimbo>section:last-child{border-bottom:0;flex:1;overflow:auto;min-height:0}
+.titulo h1{font-size:34px;line-height:1.05}
+.titulo p{margin:4px 0 0;font-size:16px;color:var(--tinta-2)}
+.situacao{display:grid;grid-template-columns:1fr auto;padding:0!important}
+.situacao>*{padding:12px 18px}
+.relogio{border-left:var(--traco);font-size:24px;font-weight:600}
+.conexao{display:flex;align-items:center;gap:10px;font-size:16px}
+.conexao i{width:12px;height:12px;border-radius:50%;background:var(--cinza);flex:none}
+.conexao.online i{background:var(--verde)}
+.conexao.demo i{background:var(--agua)}
+.conexao.offline i{background:var(--alarme)}
+.carimbo h3{font-size:19px;margin-bottom:6px}
+
+/* ---------- linhas de circuito (controles) ---------- */
+.circuitos{border:var(--traco)}
+.circuito{display:grid;grid-template-columns:48px minmax(0,1fr) auto;align-items:center;gap:14px;padding:12px 14px;border-top:1px solid var(--linha)}
+.circuito:first-child{border-top:0}
+.circuito .simb{width:48px;height:48px;border:2px solid var(--tinta);display:grid;place-items:center;transition:background .2s}
+.circuito.carga .simb{border-radius:4px}
+.circuito.sensor .simb{border-radius:50%}
+.circuito .simb svg{width:28px;height:28px}
+.circuito.on .simb{background:var(--luz)}
+.circuito.ativo .simb{background:var(--cs);border-color:var(--cs);color:#fff}
+.circuito .nome-c{font-size:19px;font-weight:600;line-height:1.15}
+.circuito .nome-c b{font-weight:700;color:var(--tinta-2);margin-right:6px}
+.circuito .estado{font-size:17px;color:var(--tinta-2)}
+.circuito.on .estado{color:var(--luz-tinta);font-weight:600}
+.circuito.ativo .estado{color:var(--cs);font-weight:600}
+.circuito .medida{font-size:44px;font-weight:600;line-height:1}
+.circuito .extra{grid-column:2/-1;display:flex;flex-direction:column;gap:8px}
+.carimbo .circuitos{border:0;margin:0 -18px}
+.carimbo .circuito{padding:10px 18px}
+.carimbo .circuito .simb{width:42px;height:42px}
+
+.bt{min-height:54px;min-width:124px;padding:0 18px;border:var(--traco);border-radius:6px;background:var(--papel);font-weight:600;font-size:18px}
+.bt:hover{background:var(--concreto)}
+.bt:active{background:var(--tinta);color:var(--papel)}
+.dupla{display:grid;grid-template-columns:1fr 1fr;border:var(--traco);border-radius:6px;overflow:hidden}
+.dupla button{min-height:52px;border:0;background:var(--papel);font-weight:600}
+.dupla button+button{border-left:var(--traco)}
+.dupla button[aria-pressed=true]{background:var(--tinta);color:var(--papel)}
+
+.auto{display:grid;grid-template-columns:auto 1fr;align-items:center;gap:12px;cursor:pointer;font-size:16px;color:var(--tinta-2)}
+.auto input{position:absolute;opacity:0;pointer-events:none}
+.chave{width:58px;height:30px;border:var(--traco);border-radius:15px;position:relative;background:var(--papel);transition:background .2s}
+.chave::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:var(--tinta);transition:transform .2s}
+.auto input:checked+.chave{background:var(--verde);border-color:var(--verde)}
+.auto input:checked+.chave::after{transform:translateX(28px);background:#fff}
+.auto input:focus-visible+.chave{outline:3px solid var(--agua);outline-offset:2px}
+
+/* régua (slider vertical) */
+.regua{display:flex;flex-direction:column;align-items:center;gap:8px;border:var(--traco);padding:14px 8px 12px;min-height:0}
+.regua h3{font-size:18px;text-align:center;line-height:1.15}
+.regua .leitura{font-size:40px;font-weight:600;line-height:1}
+.regua .sub{font-size:15px;color:var(--tinta-2);text-align:center}
+.regua-trilho{position:relative;flex:1;width:56px;min-height:160px;margin-left:24px;border:var(--traco);border-radius:4px;touch-action:none;cursor:pointer;
+  background:repeating-linear-gradient(to top,var(--tinta) 0 1.5px,transparent 1.5px 10%) left/12px 100% no-repeat,var(--papel)}
+.regua-cheio{position:absolute;left:12px;right:0;bottom:0;transition:height .1s}
+.regua-trilho.luz .regua-cheio{background:var(--luz)}
+.regua-trilho.temp .regua-cheio{background:var(--calor)}
+.regua-limiar{position:absolute;left:-30px;right:-8px;border-top:3px solid var(--alarme);pointer-events:none}
+.regua-limiar span{position:absolute;left:0;top:-22px;font-size:14px;font-weight:700;color:var(--alarme)}
+.regua-cursor{position:absolute;left:-10px;right:-10px;height:16px;margin-bottom:-8px;border-radius:3px;background:var(--tinta);outline:none}
+.regua-cursor::after{content:"";position:absolute;left:30%;right:30%;top:7px;height:2px;background:var(--papel)}
+.regua-cursor:focus-visible{outline:3px solid var(--agua);outline-offset:3px}
+.regua small{font-size:14px;color:var(--tinta-2)}
+
+/* ---------- alerta ---------- */
+.alerta{position:fixed;left:12px;right:12px;top:12px;z-index:80;display:none;align-items:center;gap:18px;padding:14px 22px;
+  background:var(--alarme);color:#fff;font-size:24px;font-weight:600}
+.alerta.ativo{display:flex}
+.alerta svg{width:34px;height:34px;flex:none}
+.alerta .bt{margin-left:auto;background:#fff;color:var(--alarme);border-color:#fff}
+
+/* ---------- detalhe ---------- */
+.detalhe{position:fixed;inset:12px;z-index:50;background:var(--papel);border:var(--traco);display:flex;flex-direction:column}
+.detalhe[hidden]{display:none}
+.detalhe::after{content:"";position:absolute;inset:4px;border:1px solid var(--tinta);pointer-events:none}
+.det-topo{display:flex;align-items:center;gap:22px;padding:18px 22px 14px;border-bottom:var(--traco);margin:5px 5px 0}
+.voltar{display:flex;align-items:center;gap:8px;min-height:58px;padding:0 22px 0 14px;border:0;border-radius:6px;background:var(--tinta);color:var(--papel);font-weight:600;font-size:20px}
+.voltar svg{width:26px;height:26px}
+.det-titulo{display:flex;align-items:center;gap:14px}
+.det-titulo .letra{width:52px;height:52px;border-radius:50%;border:2.5px solid var(--tinta);display:grid;place-items:center;font-size:26px;font-weight:700}
+.det-titulo h2{font-size:34px;line-height:1}
+.det-titulo p{margin:4px 0 0;color:var(--tinta-2);font-size:17px}
+.det-corpo{flex:1;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;padding:18px 22px 20px;min-height:0;margin:0 5px 5px}
+.det-visual{min-height:0}
+.det-visual svg{width:100%;height:100%;display:block}
+.det-controles{display:grid;gap:14px;min-height:0;overflow:auto;align-content:start}
+.det-controles.com-regua{grid-template-columns:minmax(0,1fr) 170px;align-content:stretch}
+.coluna{display:flex;flex-direction:column;gap:14px;min-height:0}
+
+/* sobrado em corte */
+.ceu{fill:#e3eef6;transition:fill .5s}
+.chuva-on .ceu{fill:#c4ccd2}
+.sol{transition:opacity .5s}
+.chuva-on .sol{opacity:0}
+.nuvem{opacity:0;transition:opacity .5s}
+.chuva-on .nuvem{opacity:1}
+.gotas line{stroke:var(--agua);stroke-width:3;stroke-linecap:round;opacity:0}
+.chuva-on .gotas line{animation:cai 1s linear infinite}
+@keyframes cai{0%{transform:translateY(0);opacity:0}15%{opacity:1}100%{transform:translateY(330px);opacity:0}}
+.braco{transition:transform 1.2s cubic-bezier(.4,0,.2,1)}
+.braco.on{transform:translateX(150px)}
+.helice{transform-box:fill-box;transform-origin:center}
+.helice.on{animation:gira .5s linear infinite}
+@keyframes gira{to{transform:rotate(360deg)}}
+
+/* simulação */
+.sim-bt{min-height:48px;padding:0 16px;border:2px solid var(--agua);border-radius:6px;background:var(--papel);color:var(--agua);font-weight:600;font-size:16px}
+.det-topo .sim-bt{margin-left:auto}
+.sim{position:fixed;right:30px;top:110px;z-index:90;width:340px;background:var(--papel);border:var(--traco);padding:16px 18px;display:flex;flex-direction:column;gap:12px;box-shadow:8px 8px 0 var(--concreto)}
+.sim[hidden],.sim-bt[hidden]{display:none}
+.sim h3{font-size:20px}
+.sim p{margin:0;font-size:15px;color:var(--tinta-2)}
+.sim label{display:flex;flex-direction:column;gap:4px;font-size:16px}
+.sim label.chk{flex-direction:row;align-items:center;gap:10px}
+.sim input[type=range]{width:100%;height:30px;accent-color:var(--tinta)}
+.sim input[type=checkbox]{width:24px;height:24px;accent-color:var(--tinta)}
+
+@media (max-width:1000px){
+  body{overflow:auto}
+  .folha{position:static;margin:12px;display:block}
+  .planta{height:60vh}
+  .carimbo{border-left:0;border-top:var(--traco)}
+  .det-corpo{grid-template-columns:1fr;overflow:auto}
+  .det-visual{height:45vh}
+  .detalhe{overflow:auto}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<svg class="sprite" aria-hidden="true">
+  <defs>
+    <radialGradient id="brilho"><stop offset="0" stop-color="#fff4c2" stop-opacity=".98"/><stop offset=".6" stop-color="#ffd257" stop-opacity=".8"/><stop offset="1" stop-color="#ffc531" stop-opacity=".4"/></radialGradient>
+    <clipPath id="clip-garagem"><rect x="0" y="0" width="280" height="270"/></clipPath>
+  </defs>
+  <symbol id="i-lamp" viewBox="0 0 24 24"><path class="ic" d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.1V16h5v-.1c0-.8.4-1.6 1.1-2.1A6 6 0 0 0 12 3z"/></symbol>
+  <symbol id="i-fan" viewBox="0 0 24 24"><g class="ic"><circle cx="12" cy="12" r="1.6"/><path d="M12 10.4c0-3-1-6.4 1.6-7.2 2.6-.8 4 2.6 1.6 5.2M13.6 12c3 0 6.4-1 7.2 1.6.8 2.6-2.6 4-5.2 1.6M12 13.6c0 3 1 6.4-1.6 7.2-2.6.8-4-2.6-1.6-5.2M10.4 12c-3 0-6.4 1-7.2-1.6-.8-2.6 2.6-4 5.2-1.6"/></g></symbol>
+  <symbol id="i-varal" viewBox="0 0 24 24"><path class="ic" d="M2 5h20M9 5 6 8l2 1.5V19h8V9.5L18 8l-3-3M9 5a3 3 0 0 0 6 0"/></symbol>
+  <symbol id="i-sirene" viewBox="0 0 24 24"><path class="ic" d="M7 18v-6a5 5 0 0 1 10 0v6M5 21h14v-3H5zM12 2.5V5M4.2 5.7l1.6 1.6M19.8 5.7l-1.6 1.6M2 12h2M20 12h2"/></symbol>
+  <symbol id="i-chuva" viewBox="0 0 24 24"><path class="ic" d="M6.5 14.5a4 4 0 0 1 .5-7.9 5.5 5.5 0 0 1 10.6 1.4 3.3 3.3 0 0 1-.6 6.5zM8 18l-1 2.5M12 18l-1 2.5M16 18l-1 2.5"/></symbol>
+  <symbol id="i-ultra" viewBox="0 0 24 24"><path class="ic" d="M3 9h4v6H3zM10.5 8.5a5 5 0 0 1 0 7M14 6a8.5 8.5 0 0 1 0 12M17.5 3.5a12 12 0 0 1 0 17"/></symbol>
+  <symbol id="i-fumaca" viewBox="0 0 24 24"><path class="ic" d="M8 21c-2-2 2-4 0-6.5s2-4 0-6.5M12 21c-2-2 2-4 0-6.5s2-4 0-6.5M16 21c-2-2 2-4 0-6.5s2-4 0-6.5M5 3h14"/></symbol>
+  <symbol id="i-solar" viewBox="0 0 24 24"><path class="ic" d="M3 19 6 7h12l3 12zM4.5 13h15M10 7l-1 12M14 7l1 12"/></symbol>
+  <symbol id="i-voltar" viewBox="0 0 24 24"><path class="ic" d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-sol" viewBox="0 0 24 24"><g class="ic"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-lua" viewBox="0 0 24 24"><path class="ic" d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></symbol>
+  <symbol id="i-quente" viewBox="0 0 24 24"><path class="ic" d="M14 14.8V5a2 2 0 0 0-4 0v9.8a4 4 0 1 0 4 0zM12 9v8"/></symbol>
+  <symbol id="i-frio" viewBox="0 0 24 24"><path class="ic" d="M12 2v20M4 7l16 10M20 7 4 17M9 3.5l3 2.5 3-2.5M9 20.5l3-2.5 3 2.5"/></symbol>
+</svg>
+
+<div class="alerta" id="alerta" role="alert">
+  <svg><use href="#i-fumaca"/></svg>
+  <span id="alerta-txt">Fumaça detectada.</span>
+  <button class="bt" id="alerta-bt" data-set="SR" data-v="0">Silenciar sirene</button>
+</div>
+
+<main class="folha" id="vista">
+  <section class="planta" aria-label="Planta baixa da maquete">
+    <svg id="svg-planta" viewBox="0 0 1200 720" preserveAspectRatio="xMidYMid meet"></svg>
+  </section>
+
+  <aside class="carimbo">
+    <section class="titulo">
+      <h1>Maquete IoT</h1>
+    </section>
+    <section class="situacao">
+      <div class="conexao" id="conexao"><i></i><span>Conectando ao ESP32</span></div>
+      <div class="relogio" id="relogio">--:--</div>
+    </section>
+    <section>
+      <h3>Alarme de incêndio</h3>
+      <div class="circuitos" id="painel-incendio"></div>
+    </section>
+    <section class="nota">
+      <p>Toque em uma construção da planta para abrir o detalhe.</p>
+      <button class="sim-bt" data-abre-sim hidden>Simular sensores</button>
+    </section>
+  </aside>
+</main>
+
+<section class="detalhe" id="detalhe" hidden role="dialog" aria-modal="true" aria-labelledby="det-nome">
+  <div class="det-topo">
+    <button class="voltar" id="voltar"><svg><use href="#i-voltar"/></svg>Planta geral</button>
+    <div class="det-titulo"><span class="letra" id="det-letra"></span><div><h2 id="det-nome"></h2><p id="det-desc"></p></div></div>
+    <button class="sim-bt" data-abre-sim hidden>Simular sensores</button>
+  </div>
+  <div class="det-corpo">
+    <div class="det-visual" id="det-visual"></div>
+    <div class="det-controles" id="det-controles"></div>
+  </div>
+</section>
+
+<div class="sim" id="sim" hidden>
+  <h3>Simular sensores</h3>
+  <p>A página não está ligada ao ESP32. Use estes controles para ensaiar a apresentação.</p>
+  <label class="chk"><input type="checkbox" data-sim="CH"> Chuva sobre o sensor</label>
+  <label class="chk"><input type="checkbox" data-sim="FU"> Fumaça no detector</label>
+  <label>Distância do carro: <span data-valor="US"></span><input type="range" min="1" max="40" step="0.5" data-sim="US"></label>
+  <label>Tensão do painel solar: <span data-valor="FV"></span><input type="range" min="0" max="6" step="0.1" data-sim="FV"></label>
+</div>
+
+<script>
+/* =========================================================
+   Configuração: nomes, limiares e dispositivos
+   ========================================================= */
+const LIM = { luz: 30, temp: 28, dist: 5, sirene: 3, fvMin: 0.5 };
+
+const CASAS = {
+  casa:    { letra: 'A', nome: 'Casa',    desc: 'Três cômodos com luz que acende quando o ambiente escurece' },
+  sobrado: { letra: 'B', nome: 'Sobrado', desc: 'Dois pavimentos. O varal entra na lavanderia quando chove e o ventilador liga com calor' },
+  garagem: { letra: 'C', nome: 'Garagem', desc: 'O sensor fica na parede oposta ao portão, de frente para o carro que entra' }
+};
+
+const DEV = {
+  L1: { tipo: 'carga',  nome: 'Lâmpada do quarto',     icone: 'i-lamp' },
+  L2: { tipo: 'carga',  nome: 'Lâmpada do escritório', icone: 'i-lamp' },
+  L3: { tipo: 'carga',  nome: 'Lâmpada da cozinha',    icone: 'i-lamp' },
+  VT: { tipo: 'carga',  nome: 'Ventilador do quarto',  icone: 'i-fan' },
+  VR: { tipo: 'carga',  nome: 'Varal',                 icone: 'i-varal' },
+  CH: { tipo: 'sensor', nome: 'Sensor de chuva',       icone: 'i-chuva',  cs: 'var(--agua)' },
+  FV: { tipo: 'sensor', nome: 'Painel solar',          icone: 'i-solar',  cs: 'var(--verde)' },
+  LG: { tipo: 'carga',  nome: 'Luz da garagem',        icone: 'i-lamp' },
+  US: { tipo: 'sensor', nome: 'Sensor de distância',   icone: 'i-ultra',  cs: 'var(--verde)' },
+  SR: { tipo: 'carga',  nome: 'Sirene',                icone: 'i-sirene' },
+  FU: { tipo: 'sensor', nome: 'Detector de fumaça',    icone: 'i-fumaca', cs: 'var(--alarme)' }
+};
+
+/* Estado (o ESP32 devolve o mesmo formato em GET /api/estado) */
+const S = {
+  L1: 0, L2: 0, L3: 0, VT: 0, VR: 0, LG: 0, SR: 0,
+  CH: 0, FU: 0, US: 35, FV: 4.6,
+  luz: 80, temp: 24,
+  aLuz: 1, aVent: 1, aVaral: 1, aGar: 1, aSir: 1
+};
+
+const fmt = (v, d = 1) => Number(v).toLocaleString('pt-BR', { maximumFractionDigits: d, minimumFractionDigits: d });
+const escuro = () => S.luz < LIM.luz;
+const quente = () => S.temp > LIM.temp;
+const carro  = () => S.US < LIM.dist;
+
+function sensorAtivo(id) {
+  if (id === 'CH') return !!S.CH;
+  if (id === 'FU') return !!S.FU;
+  if (id === 'US') return carro();
+  if (id === 'FV') return S.FV >= LIM.fvMin;
+  return false;
+}
+
+function textoEstado(id) {
+  switch (id) {
+    case 'L1': case 'L2': case 'L3': case 'LG': return S[id] ? 'Acesa' : 'Apagada';
+    case 'VT': return S.VT ? 'Ligado' : 'Desligado';
+    case 'VR': return S.VR ? 'Recolhido' : 'Estendido';
+    case 'SR': return S.SR ? 'Tocando' : 'Em silêncio';
+    case 'CH': return S.CH ? 'Chovendo' : 'Seco';
+    case 'FU': return S.FU ? 'Fumaça detectada' : 'Sem fumaça';
+    case 'US': return carro() ? 'Carro estacionado' : 'Vaga livre';
+    case 'FV': return S.FV >= LIM.fvMin ? `Gerando ${fmt(S.FV)} V` : 'Sem geração';
+  }
+  return '';
+}
+
+function textoAcao(id) {
+  switch (id) {
+    case 'VT': return S.VT ? 'Desligar' : 'Ligar';
+    case 'SR': return S.SR ? 'Silenciar' : 'Tocar';
+    default:   return S[id] ? 'Apagar' : 'Acender';
+  }
+}
+
+function textoValor(id) {
+  switch (id) {
+    case 'luz': return S.luz + '%';
+    case 'temp': return fmt(S.temp, 0) + ' °C';
+    case 'US': return fmt(S.US) + ' cm';
+    case 'FV': return fmt(S.FV) + ' V';
+  }
+  return '';
+}
+
+function textoSub(id) {
+  switch (id) {
+    case 'luz': return escuro() ? 'Escuro' : 'Claro';
+    case 'temp': return quente() ? 'Quente' : 'Agradável';
+    case 'US': return `Estacionado abaixo de ${LIM.dist} cm`;
+  }
+  return '';
+}
+
+/* =========================================================
+   Desenho
+   ========================================================= */
+function mk(id, x, y) {
+  const d = DEV[id];
+  const forma = d.tipo === 'carga'
+    ? '<rect class="fundo" x="-22" y="-22" width="44" height="44" rx="4"/>'
+    : '<circle class="fundo" r="22"/>';
+  return `<g class="mk ${d.tipo}" data-mk="${id}" transform="translate(${x} ${y})" style="--cs:${d.cs || 'none'}">
+    <title>${d.nome}</title>${forma}
+    <use href="#${d.icone}" x="-13" y="-13" width="26" height="26" class="ic"/>
+    <text y="40">${id}</text></g>`;
+}
+
+function chamada(letra, x, y) {
+  return `<g class="chamada" transform="translate(${x} ${y})"><circle r="20"/><text y="8">${letra}</text></g>`;
+}
+
+// Casa: 430 x 290 (frente embaixo)
+function svgCasa() {
+  return `
+  <rect class="saia-casa" x="-16" y="-14" width="462" height="318" rx="18"/>
+  <rect class="piso-casa" x="0" y="0" width="430" height="290"/>
+  <rect class="escuridao" data-escuridao x="0" y="0" width="430" height="290"/>
+  <rect class="brilho" data-brilho="L1" x="0" y="0" width="120" height="145" fill="url(#brilho)"/>
+  <rect class="brilho" data-brilho="L2" x="0" y="145" width="120" height="145" fill="url(#brilho)"/>
+  <rect class="brilho" data-brilho="L3" x="310" y="0" width="120" height="290" fill="url(#brilho)"/>
+  <path class="parede" d="M190 290H0V0h430v290H250M120 0v90M120 130v60M120 230v60M0 145h120M310 0v165M310 210v80"/>
+  <path class="janela" d="M30 0h60M175 0h80M340 0h60M0 45v55M430 70v60M430 190v50"/>
+  <path class="janela-linha" d="M30 0h60M175 0h80M340 0h60M0 45v55M430 70v60M430 190v50"/>
+  <path class="parede-fina" d="M190 290a60 60 0 0 1 60-60" stroke-dasharray="4 4"/>
+  <text class="rotulo" x="215" y="150" text-anchor="middle">Sala</text>
+  <text class="rotulo-forte" x="60" y="128" text-anchor="middle">Quarto</text>
+  <text class="rotulo-forte" x="60" y="273" text-anchor="middle">Escritório</text>
+  <text class="rotulo-forte" x="370" y="205" text-anchor="middle">Cozinha</text>
+  ${mk('L1', 60, 62)}${mk('L2', 60, 207)}${mk('L3', 370, 140)}`;
+}
+
+// Sobrado na planta: 270 x 280, pavimentos empilhados
+function svgSobradoPlanta() {
+  return `
+  <rect x="12" y="12" width="270" height="280" fill="var(--papel)" stroke="var(--tinta)" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <rect class="piso-sobrado" x="0" y="0" width="270" height="280"/>
+  <path class="parede-fina" d="M0 140h270" stroke-dasharray="10 6"/>
+  <path class="parede" d="M0 0h270v280H0z"/>
+  <text class="pav" x="14" y="26">1º andar</text>
+  <text class="pav" x="14" y="166">Térreo</text>
+  <text class="rotulo-forte" x="135" y="126" text-anchor="middle">Quarto</text>
+  <text class="rotulo-forte" x="135" y="266" text-anchor="middle">Lavanderia</text>
+  <path d="M222 160h10v-10h10v-10h10v-10h10" class="parede-fina"/>
+  ${mk('VT', 135, 66)}${mk('VR', 135, 206)}`;
+}
+
+// Garagem: 280 x 270, portão no fundo, sensor na parede da frente
+function yCarro() { return 138 - Math.min(S.US, 60) * 7; }
+function svgGaragem(regua) {
+  let r = '';
+  if (regua) {
+    r += '<g font-size="15" fill="var(--tinta-2)"><line x1="312" y1="248" x2="312" y2="38" stroke="var(--tinta)" stroke-width="2"/>';
+    for (let d = 0; d <= 30; d += 5) {
+      const y = 248 - d * 7, lim = d === LIM.dist;
+      r += `<line x1="304" x2="320" y1="${y}" y2="${y}" stroke="${lim ? 'var(--alarme)' : 'var(--tinta)'}" stroke-width="${lim ? 3 : 2}"/>
+            <text x="328" y="${y + 5}" ${lim ? 'fill="var(--alarme)" font-weight="700"' : ''}>${d} cm${lim ? ', limite' : ''}</text>`;
+    }
+    r += '</g>';
+  }
+  return `
+  <rect class="piso-garagem" x="0" y="0" width="280" height="270"/>
+  <path class="cone" data-cone d="M140 262 98 8h84z"/>
+  <g clip-path="url(#clip-garagem)">
+    <g class="carro" data-carro transform="translate(105 ${yCarro()})">
+      <rect width="70" height="110" rx="14" fill="#2c6cb5" stroke="var(--tinta)" stroke-width="2"/>
+      <rect x="8" y="16" width="54" height="13" rx="3" fill="#d6e6f5"/>
+      <rect x="8" y="70" width="54" height="20" rx="3" fill="#d6e6f5"/>
+    </g>
+  </g>
+  <rect class="viga" x="0" y="98" width="280" height="12"/>
+  <circle class="led-g" data-led cx="113" cy="120" r="7"/><circle class="led-g" data-led cx="131" cy="120" r="7"/>
+  <circle class="led-g" data-led cx="149" cy="120" r="7"/><circle class="led-g" data-led cx="167" cy="120" r="7"/>
+  <path class="parede" d="M55 0H0v270h280V0h-55"/>
+  <rect x="116" y="252" width="48" height="14" rx="2" fill="#1f5fae" stroke="var(--tinta)" stroke-width="1.5"/>
+  <circle cx="129" cy="252" r="5" fill="#d6e6f5" stroke="var(--tinta)"/><circle cx="151" cy="252" r="5" fill="#d6e6f5" stroke="var(--tinta)"/>
+  <text class="rotulo" x="140" y="-10" text-anchor="middle">Portão</text>
+  ${mk('LG', 46, 160)}${mk('US', 210, 248)}${r}`;
+}
+
+// Sobrado em corte lateral
+function svgSobradoCorte() {
+  let gotas = '';
+  for (let i = 0; i < 22; i++) {
+    const x = 20 + (i * 47) % 300, y = 70 + (i * 29) % 40;
+    gotas += `<line x1="${x}" y1="${y}" x2="${x - 4}" y2="${y + 16}" style="animation-delay:${(i * 0.137) % 1}s"/>`;
+  }
+  return `<svg viewBox="0 0 640 560" preserveAspectRatio="xMidYMid meet" data-ceu>
+  <rect class="ceu" width="640" height="470"/>
+  <g class="sol" transform="translate(570 70)"><circle r="24" fill="var(--luz)" stroke="var(--tinta)" stroke-width="2"/><path d="M0-40v-12M0 40v12M-40 0h-12M40 0h12M-28-28l-8-8M28 28l8 8M-28 28l-8 8M28-28l8-8" stroke="var(--tinta)" stroke-width="2.5" stroke-linecap="round"/></g>
+  <g class="nuvem" transform="translate(20 20)">
+    <path d="M40 70a32 32 0 0 1 8-62 44 44 0 0 1 82 4 34 34 0 0 1 60 18 26 26 0 0 1-6 40z" fill="#8f9aa5" stroke="var(--tinta)" stroke-width="2"/>
+    <g class="gotas">${gotas}</g>
+  </g>
+  <rect y="470" width="640" height="90" fill="#ddd3c2"/>
+  <path d="M0 470h640" stroke="var(--tinta)" stroke-width="3"/>
+  <polygon points="210,150 380,40 550,150" fill="#b8bfc5" stroke="var(--tinta)" stroke-width="6" stroke-linejoin="round"/>
+  <rect x="230" y="150" width="300" height="320" fill="#f1f2f3" stroke="var(--tinta)" stroke-width="6"/>
+  <rect x="230" y="300" width="300" height="10" fill="var(--tinta)"/>
+  <text class="pav" x="246" y="178">1º andar, quarto</text>
+  <text class="pav" x="288" y="334">Térreo, lavanderia</text>
+  <g transform="translate(246 262)"><use href="#i-quente" width="26" height="26" style="color:var(--calor)"/><text x="30" y="20" font-size="22" font-weight="600" data-valor="temp"></text></g>
+  <rect x="392" y="192" width="104" height="100" rx="6" fill="#262d33"/>
+  <circle cx="444" cy="242" r="44" fill="#39424a"/>
+  <g class="helice" data-helice><g fill="#aab3ba">
+    <ellipse cx="444" cy="219" rx="10" ry="21"/><ellipse cx="444" cy="265" rx="10" ry="21"/>
+    <ellipse cx="421" cy="242" rx="21" ry="10"/><ellipse cx="467" cy="242" rx="21" ry="10"/></g>
+    <circle cx="444" cy="242" r="8" fill="#dfe3e6"/></g>
+  <path d="M410 470v-60a28 28 0 0 1 56 0v60" fill="#dfe3e6" stroke="var(--tinta)" stroke-width="3"/>
+  <rect x="226" y="346" width="10" height="70" fill="#f1f2f3"/>
+  <path d="M224 346h14M224 416h14" stroke="var(--tinta)" stroke-width="3"/>
+  <rect x="240" y="318" width="36" height="20" rx="2" fill="#2a5db0" stroke="var(--tinta)" stroke-width="1.5"><title>Servo do varal</title></rect>
+  <g class="braco" data-braco>
+    <line x1="226" y1="356" x2="92" y2="356" stroke="#8a5a2b" stroke-width="8" stroke-linecap="round"/>
+    <g class="roupas" stroke="var(--tinta)" stroke-width="1.5">
+      <path d="M112 360l-12 10 6 5v28h28v-28l6-5-12-10z" fill="var(--ocre)"/>
+      <path d="M150 360v44h10l4-26 4 26h10v-44z" fill="#2c6cb5"/>
+      <path d="M196 360l-12 10 6 5v28h22v-28l-4-5-2-10z" fill="var(--alarme)"/>
+    </g>
+  </g>
+  <polygon points="12,470 86,470 74,428 24,428" fill="#23446f" stroke="var(--tinta)" stroke-width="2"/>
+  <path d="M18 449h62M43 428l-3 42M57 428l3 42" stroke="#7d9ac2" stroke-width="1.5"/>
+  <rect x="104" y="458" width="56" height="12" fill="#b3352b" stroke="var(--tinta)" stroke-width="1.5"/>
+  <path d="M110 464h44" stroke="#e8c27a" stroke-width="2" stroke-dasharray="4 3"/>
+  ${mk('FV', 49, 506)}${mk('CH', 132, 506)}${mk('VR', 495, 345)}${mk('VT', 330, 205)}
+  </svg>`;
+}
+
+function legendaSVG(x, y) {
+  const itens = Object.entries(DEV);
+  const metade = Math.ceil(itens.length / 2);
+  const linhas = itens.map(([id, d], i) => {
+    const cx = i < metade ? 0 : 190, cy = 66 + (i % metade) * 24;
+    return `<text class="legenda-t" x="${cx}" y="${cy}"><tspan class="cod">${id}</tspan><tspan x="${cx + 30}">${d.nome}</tspan></text>`;
+  }).join('');
+  return `<g transform="translate(${x} ${y})">
+    <text x="0" y="0" font-size="19" font-weight="600" fill="var(--tinta)">Convenções</text>
+    <rect x="0" y="16" width="16" height="16" rx="3" fill="var(--papel)" stroke="var(--tinta)" stroke-width="2"/><text class="legenda-t" x="22" y="30">Carga</text>
+    <circle cx="96" cy="24" r="8" fill="var(--papel)" stroke="var(--tinta)" stroke-width="2"/><text class="legenda-t" x="110" y="30">Sensor</text>
+    <rect x="178" y="16" width="16" height="16" rx="3" fill="var(--luz)" stroke="var(--tinta)" stroke-width="2"/><text class="legenda-t" x="200" y="30">Ligada</text>
+    ${linhas}</g>`;
+}
+
+function desenharPlanta() {
+  document.getElementById('svg-planta').innerHTML = `
+  <text class="rotulo" x="20" y="24">Fundos</text>
+
+  <!-- painel solar e sensor de chuva, atrás do sobrado -->
+  <polygon points="566,64 624,64 616,36 574,36" fill="#23446f" stroke="var(--tinta)" stroke-width="2"/>
+  <path d="M570 50h50M592 36l-2 28M600 36l2 28" stroke="#7d9ac2" stroke-width="1.5"/>
+  ${mk('FV', 656, 50)}
+  <rect x="704" y="38" width="44" height="24" fill="#b3352b" stroke="var(--tinta)" stroke-width="1.5"/>
+  <path d="M709 50h34" stroke="#e8c27a" stroke-width="2" stroke-dasharray="4 3"/>
+  ${mk('CH', 784, 50)}
+
+  <g class="casa" data-casa="casa" tabindex="0" role="button" aria-label="Abrir a Casa">
+    <rect class="moldura" x="30" y="68" width="490" height="396" rx="6"/>
+    <g transform="translate(60 92)">${svgCasa()}</g>
+    ${chamada('A', 210, 443)}<text class="nome" x="240" y="452">Casa</text>
+  </g>
+
+  <g class="casa" data-casa="sobrado" tabindex="0" role="button" aria-label="Abrir o Sobrado">
+    <rect class="moldura" x="544" y="92" width="306" height="372" rx="6"/>
+    <g transform="translate(560 106)">${svgSobradoPlanta()}</g>
+    ${chamada('B', 638, 443)}<text class="nome" x="668" y="452">Sobrado</text>
+  </g>
+
+  <g class="casa" data-casa="garagem" tabindex="0" role="button" aria-label="Abrir a Garagem">
+    <rect class="moldura" x="866" y="80" width="310" height="384" rx="6"/>
+    <g transform="translate(882 116)">${svgGaragem(false)}</g>
+    ${chamada('C', 960, 443)}<text class="nome" x="990" y="452">Garagem</text>
+  </g>
+
+  <path d="M30 480h1146" stroke="var(--tinta)" stroke-width="1.5" stroke-dasharray="12 6 3 6"/>
+  <text class="rotulo" x="30" y="506">Área externa</text>
+  ${mk('SR', 74, 556)}<text class="rotulo-forte" x="110" y="562">Sirene</text>
+  ${mk('FU', 74, 646)}<text class="rotulo-forte" x="110" y="652">Detector de fumaça</text>
+  <g transform="translate(400 520)">
+    <rect width="320" height="150" fill="var(--papel)" stroke="var(--tinta)" stroke-width="2"/>
+    <path d="M14 28h292M14 122h292" stroke="var(--linha)" stroke-width="8" stroke-dasharray="3 5"/>
+    <rect x="186" y="52" width="100" height="48" fill="var(--tinta)"/>
+    <text x="236" y="82" fill="var(--papel)" font-size="16" font-weight="600" text-anchor="middle">ESP32</text>
+    <text class="rotulo" x="20" y="82">Protoboard</text>
+  </g>
+  <text class="rotulo" x="400" y="694">Central de controle e servidor da página</text>
+  <text class="rotulo" x="1176" y="712" text-anchor="end">Frente</text>
+  ${legendaSVG(810, 518)}`;
+}
+
+/* =========================================================
+   Componentes de controle
+   ========================================================= */
+function circuito(id, opcoes = {}) {
+  const d = DEV[id];
+  const acao = opcoes.semBotao || d.tipo === 'sensor' ? '' : `<button class="bt" data-toggle="${id}"></button>`;
+  return `<div class="circuito ${d.tipo}" data-${d.tipo}="${id}" style="--cs:${d.cs || 'none'}">
+    <div class="simb"><svg><use href="#${d.icone}"/></svg></div>
+    <div><div class="nome-c"><b>${id}</b>${d.nome}</div>
+      ${opcoes.medida ? `<div class="medida" data-valor="${id}"></div>` : ''}
+      <div class="estado" data-estado="${id}"></div></div>
+    ${acao}
+    ${opcoes.extra ? `<div class="extra">${opcoes.extra}</div>` : ''}
+  </div>`;
+}
+
+function autoSw(chave, texto) {
+  return `<label class="auto"><input type="checkbox" data-auto="${chave}"><span class="chave"></span><span>${texto}</span></label>`;
+}
+
+const FAIXA = {
+  luz:  { min: 0,  max: 100, passo: 1, titulo: 'Luz do ambiente', topo: 'i-sol',    base: 'i-lua',  lim: () => LIM.luz,  limTxt: () => `${LIM.luz}%` },
+  temp: { min: 15, max: 40,  passo: 1, titulo: 'Temperatura do quarto', topo: 'i-quente', base: 'i-frio', lim: () => LIM.temp, limTxt: () => `${LIM.temp} °C` }
+};
+
+function regua(chave) {
+  const f = FAIXA[chave];
+  return `<div class="regua" data-vs="${chave}">
+    <h3>${f.titulo}</h3>
+    <span class="leitura" data-valor="${chave}"></span>
+    <span class="sub" data-sub="${chave}"></span>
+    <svg width="28" height="28"><use href="#${f.topo}"/></svg>
+    <div class="regua-trilho ${chave}">
+      <div class="regua-cheio"></div>
+      <div class="regua-limiar"><span>${f.limTxt()}</span></div>
+      <div class="regua-cursor" tabindex="0" role="slider" aria-label="${f.titulo}" aria-valuemin="${f.min}" aria-valuemax="${f.max}"></div>
+    </div>
+    <svg width="28" height="28"><use href="#${f.base}"/></svg>
+  </div>`;
+}
+
+function ligarReguas(raiz) {
+  raiz.querySelectorAll('[data-vs]').forEach(el => {
+    const chave = el.dataset.vs, f = FAIXA[chave];
+    const trilho = el.querySelector('.regua-trilho'), cursor = el.querySelector('.regua-cursor');
+    const porY = y => {
+      const r = trilho.getBoundingClientRect();
+      const fr = Math.min(1, Math.max(0, 1 - (y - r.top) / r.height));
+      definir(chave, Math.round((f.min + fr * (f.max - f.min)) / f.passo) * f.passo, true);
+    };
+    trilho.addEventListener('pointerdown', e => { arrastando = chave; trilho.setPointerCapture(e.pointerId); porY(e.clientY); cursor.focus({ preventScroll: true }); });
+    trilho.addEventListener('pointermove', e => { if (arrastando === chave) porY(e.clientY); });
+    const soltar = () => { if (arrastando === chave) { arrastando = null; definir(chave, S[chave]); } };
+    trilho.addEventListener('pointerup', soltar);
+    trilho.addEventListener('pointercancel', soltar);
+    cursor.addEventListener('keydown', e => {
+      const passo = { ArrowUp: 1, ArrowRight: 1, ArrowDown: -1, ArrowLeft: -1 }[e.key];
+      if (!passo) return;
+      e.preventDefault();
+      definir(chave, Math.min(f.max, Math.max(f.min, S[chave] + passo * f.passo)));
+    });
+  });
+}
+
+function desenharCarimbo() {
+  document.getElementById('painel-incendio').innerHTML =
+    circuito('FU') + circuito('SR') +
+    `<div class="circuito"><div></div><div>${autoSw('aSir', `Tocar a sirene por ${LIM.sirene} s quando houver fumaça`)}</div></div>`;
+}
+
+/* =========================================================
+   Detalhe
+   ========================================================= */
+const detalhe = document.getElementById('detalhe');
+let casaAberta = null;
+
+function montarDetalhe(casa) {
+  const c = CASAS[casa];
+  document.getElementById('det-letra').textContent = c.letra;
+  document.getElementById('det-nome').textContent = c.nome;
+  document.getElementById('det-desc').textContent = c.desc;
+  const visual = document.getElementById('det-visual');
+  const ctrl = document.getElementById('det-controles');
+  ctrl.className = 'det-controles';
+
+  if (casa === 'casa') {
+    visual.innerHTML = `<svg viewBox="-40 -36 510 362" preserveAspectRatio="xMidYMid meet">${svgCasa()}</svg>`;
+    ctrl.classList.add('com-regua');
+    ctrl.innerHTML = `<div class="coluna">
+        <div class="circuitos">${circuito('L1')}${circuito('L2')}${circuito('L3')}</div>
+        <div class="dupla"><button data-todas="1">Acender todas</button><button data-todas="0">Apagar todas</button></div>
+        ${autoSw('aLuz', `Acender tudo quando a luz do ambiente ficar abaixo de ${LIM.luz}% e apagar quando clarear`)}
+      </div>${regua('luz')}`;
+  } else if (casa === 'sobrado') {
+    visual.innerHTML = svgSobradoCorte();
+    ctrl.classList.add('com-regua');
+    ctrl.innerHTML = `<div class="coluna"><div class="circuitos">
+        ${circuito('CH')}
+        ${circuito('VR', { semBotao: true, extra: `<div class="dupla"><button data-set="VR" data-v="0">Estender</button><button data-set="VR" data-v="1">Recolher</button></div>
+          ${autoSw('aVaral', 'Recolher quando chover e estender quando secar')}` })}
+        ${circuito('VT', { extra: autoSw('aVent', `Ligar acima de ${LIM.temp} °C e desligar abaixo`) })}
+        ${circuito('FV')}
+      </div></div>${regua('temp')}`;
+  } else {
+    visual.innerHTML = `<svg viewBox="-30 -40 470 360" preserveAspectRatio="xMidYMid meet">${svgGaragem(true)}</svg>`;
+    ctrl.innerHTML = `<div class="circuitos">
+        ${circuito('US', { medida: true })}
+        ${circuito('LG', { extra: autoSw('aGar', `Acender quando o carro estacionar (abaixo de ${LIM.dist} cm) e apagar quando sair`) })}
+      </div>`;
+  }
+  ligarReguas(ctrl);
+  render();
+}
+
+function recorte(el) {
+  const r = el.getBoundingClientRect(), b = detalhe.getBoundingClientRect();
+  return `inset(${r.top - b.top}px ${b.right - r.right}px ${b.bottom - r.bottom}px ${r.left - b.left}px)`;
+}
+const semMovimento = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function abrir(casa, origem) {
+  casaAberta = casa;
+  montarDetalhe(casa);
+  detalhe.hidden = false;
+  if (!semMovimento()) {
+    detalhe.style.transition = 'none';
+    detalhe.style.clipPath = recorte(origem);
+    detalhe.offsetWidth;
+    detalhe.style.transition = 'clip-path .45s cubic-bezier(.2,.8,.2,1)';
+    detalhe.style.clipPath = 'inset(0px)';
+  }
+  document.getElementById('voltar').focus({ preventScroll: true });
+}
+
+function fechar() {
+  if (!casaAberta) return;
+  const origem = document.querySelector(`.casa[data-casa="${casaAberta}"]`);
+  casaAberta = null;
+  const fim = () => { detalhe.hidden = true; detalhe.style.clipPath = ''; origem.focus({ preventScroll: true }); };
+  if (semMovimento()) return fim();
+  detalhe.style.clipPath = recorte(origem);
+  setTimeout(fim, 450);
+}
+
+/* =========================================================
+   Render: aplica o estado S em toda a página
+   ========================================================= */
+let arrastando = null;
+
+function render() {
+  const $$ = s => document.querySelectorAll(s);
+  $$('[data-mk]').forEach(el => {
+    const id = el.dataset.mk;
+    el.classList.toggle('on', DEV[id].tipo === 'carga' && !!S[id]);
+    el.classList.toggle('ativo', DEV[id].tipo === 'sensor' && sensorAtivo(id));
+  });
+  $$('[data-carga]').forEach(el => el.classList.toggle('on', !!S[el.dataset.carga]));
+  $$('[data-sensor]').forEach(el => el.classList.toggle('ativo', sensorAtivo(el.dataset.sensor)));
+  $$('[data-estado]').forEach(el => el.textContent = textoEstado(el.dataset.estado));
+  $$('[data-valor]').forEach(el => el.textContent = textoValor(el.dataset.valor));
+  $$('[data-sub]').forEach(el => el.textContent = textoSub(el.dataset.sub));
+  $$('[data-toggle]').forEach(el => el.textContent = textoAcao(el.dataset.toggle));
+  $$('[data-set]').forEach(el => el.setAttribute('aria-pressed', String(S[el.dataset.set]) === el.dataset.v));
+  $$('[data-auto]').forEach(el => el.checked = !!S[el.dataset.auto]);
+  $$('[data-brilho]').forEach(el => el.classList.toggle('on', !!S[el.dataset.brilho]));
+  $$('[data-escuridao]').forEach(el => el.style.opacity = ((100 - S.luz) / 100 * 0.6).toFixed(2));
+  $$('[data-led]').forEach(el => el.classList.toggle('on', !!S.LG));
+  $$('[data-cone]').forEach(el => el.classList.toggle('ativo', carro()));
+  $$('[data-carro]').forEach(el => {
+    el.setAttribute('transform', `translate(105 ${yCarro()})`);
+    el.style.opacity = S.US > 30 ? 0 : (carro() ? 1 : .55);
+  });
+  $$('[data-ceu]').forEach(el => el.classList.toggle('chuva-on', !!S.CH));
+  $$('[data-braco]').forEach(el => el.classList.toggle('on', !!S.VR));
+  $$('[data-helice]').forEach(el => el.classList.toggle('on', !!S.VT));
+  $$('[data-vs]').forEach(el => {
+    const f = FAIXA[el.dataset.vs], v = S[el.dataset.vs];
+    const fr = (v - f.min) / (f.max - f.min), fl = (f.lim() - f.min) / (f.max - f.min);
+    el.querySelector('.regua-cheio').style.height = (fr * 100) + '%';
+    el.querySelector('.regua-cursor').style.bottom = (fr * 100) + '%';
+    el.querySelector('.regua-cursor').setAttribute('aria-valuenow', v);
+    el.querySelector('.regua-limiar').style.bottom = (fl * 100) + '%';
+  });
+  $$('[data-sim]').forEach(el => {
+    if (el.type === 'checkbox') el.checked = !!S[el.dataset.sim];
+    else if (document.activeElement !== el) el.value = S[el.dataset.sim];
+  });
+  document.getElementById('alerta').classList.toggle('ativo', !!S.FU);
+  document.getElementById('alerta-txt').textContent = S.SR ? 'Fumaça detectada. A sirene está tocando.' : 'Fumaça detectada.';
+  document.getElementById('alerta-bt').hidden = !S.SR;
+}
+
+/* =========================================================
+   Comunicação com o ESP32
+   GET  /api/estado            -> JSON com o estado S (e "lim" opcional)
+   POST /api/set  id=..&v=..   -> aplica e devolve o estado
+   Aberta como arquivo local (ou com ?demo) a página simula o ESP32.
+   ========================================================= */
+let modo = 'conectando', falhas = 0;
+const ultimoEnvio = {}, pendente = {}, travado = {};
+
+function definir(id, v, arrastar = false) {
+  if (modo === 'demo') { simAplicar(id, v); render(); return; }
+  S[id] = v;
+  ultimoEnvio[id] = Date.now();
+  render();
+  if (arrastar) {   // durante o arraste, no máximo ~3 envios por segundo
+    if (travado[id]) { pendente[id] = v; return; }
+    travado[id] = setTimeout(() => {
+      travado[id] = null;
+      if (pendente[id] !== undefined) { const p = pendente[id]; delete pendente[id]; enviar(id, p); }
+    }, 300);
+  }
+  enviar(id, v);
+}
+
+async function enviar(id, v) {
+  try {
+    const r = await fetch('/api/set', { method: 'POST', body: new URLSearchParams({ id, v }) });
+    if (r.ok) mesclar(await r.json());
+  } catch (e) { marcarFalha(); }
+}
+
+function mesclar(dados) {
+  if (dados.lim) Object.assign(LIM, dados.lim);
+  for (const k in S) {
+    if (!(k in dados) || k === arrastando) continue;
+    if (Date.now() - (ultimoEnvio[k] || 0) < 800) continue;
+    S[k] = dados[k];
+  }
+  render();
+}
+
+async function buscar() {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 2500);
+  try {
+    const r = await fetch('/api/estado', { cache: 'no-store', signal: ctl.signal });
+    if (!r.ok) throw new Error(r.status);
+    mesclar(await r.json());
+    falhas = 0;
+    status('online', 'ESP32 conectado');
+    return true;
+  } catch (e) { marcarFalha(); return false; }
+  finally { clearTimeout(t); }
+}
+
+function marcarFalha() { if (modo === 'online' && ++falhas >= 3) status('offline', 'Sem resposta do ESP32. Verifique o Wi-Fi.'); }
+
+function status(classe, txt) {
+  const p = document.getElementById('conexao');
+  p.className = 'conexao ' + classe;
+  p.querySelector('span').textContent = txt;
+}
+
+async function iniciarConexao() {
+  const forcarDemo = location.protocol === 'file:' || new URLSearchParams(location.search).has('demo');
+  if (!forcarDemo && await buscar()) {
+    modo = 'online';
+    setInterval(buscar, 700);
+  } else {
+    modo = 'demo';
+    status('demo', 'Simulação, sem ESP32');
+    document.querySelectorAll('[data-abre-sim]').forEach(b => b.hidden = false);
+  }
+}
+
+/* regras de automação (o firmware aplica as mesmas) */
+function condicoes() { return { escuro: escuro(), quente: quente(), carro: carro(), chuva: !!S.CH, fumaca: !!S.FU }; }
+
+let timerSirene = null;
+
+function simAplicar(id, v) {
+  const srAntes = S.SR;
+  const antes = condicoes();
+  S[id] = v;
+  const d = condicoes();
+  if (S.aLuz && d.escuro !== antes.escuro) S.L1 = S.L2 = S.L3 = +d.escuro;
+  if (S.aVent && d.quente !== antes.quente) S.VT = +d.quente;
+  if (S.aVaral && d.chuva !== antes.chuva) S.VR = +d.chuva;
+  if (S.aGar && d.carro !== antes.carro) S.LG = +d.carro;
+  if (S.aSir && d.fumaca !== antes.fumaca) S.SR = +d.fumaca;
+  if (v) {
+    if (id === 'aLuz') S.L1 = S.L2 = S.L3 = +d.escuro;
+    if (id === 'aVent') S.VT = +d.quente;
+    if (id === 'aVaral') S.VR = +d.chuva;
+    if (id === 'aGar') S.LG = +d.carro;
+    if (id === 'aSir') S.SR = +d.fumaca;
+  }
+  // igual ao firmware: a sirene silencia sozinha após LIM.sirene segundos
+  if (S.SR && !srAntes) {
+    clearTimeout(timerSirene);
+    timerSirene = setTimeout(() => { S.SR = 0; render(); }, LIM.sirene * 1000);
+  }
+}
+
+/* =========================================================
+   Eventos
+   ========================================================= */
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-toggle],[data-set],[data-todas],.casa,#voltar,[data-abre-sim]');
+  if (!t) return;
+  if (t.matches('.casa')) return abrir(t.dataset.casa, t);
+  if (t.id === 'voltar') return fechar();
+  if (t.matches('[data-abre-sim]')) { const s = document.getElementById('sim'); s.hidden = !s.hidden; return; }
+  if (t.dataset.toggle) return definir(t.dataset.toggle, S[t.dataset.toggle] ? 0 : 1);
+  if (t.dataset.set) return definir(t.dataset.set, +t.dataset.v);
+  if (t.dataset.todas) ['L1', 'L2', 'L3'].forEach(id => definir(id, +t.dataset.todas));
+});
+
+document.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.auto) definir(t.dataset.auto, t.checked ? 1 : 0);
+  if (t.dataset.sim && t.type === 'checkbox') { simAplicar(t.dataset.sim, t.checked ? 1 : 0); render(); }
+});
+
+document.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.sim && t.type === 'range') { simAplicar(t.dataset.sim, +t.value); render(); }
+});
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') fechar();
+  if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.casa')) { e.preventDefault(); abrir(e.target.dataset.casa, e.target); }
+});
+
+function relogio() {
+  document.getElementById('relogio').textContent = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
+desenharPlanta();
+desenharCarimbo();
+render();
+relogio(); setInterval(relogio, 10000);
+iniciarConexao();
+</script>
+</body>
+</html>
