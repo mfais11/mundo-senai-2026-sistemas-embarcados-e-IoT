@@ -11,6 +11,6 @@
 * O funcionamento automático do varal e da luz da garagem ao aproximar objetos dos sensores.
 
 ## O que eu mudaria..
-* Adicionaria um diplay OLED na maquete para exibir o IP do ESP32 e o status da rede Wi-Fi sem precisar abrir o monitor serial do computador[cite: 1].
+* Adicionaria um diplay OLED na maquete para exibir o IP do ESP32 e o status da rede Wi-Fi sem precisar abrir o monitor serial do computador.
 
 </div>
