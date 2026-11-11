@@ -16,6 +16,6 @@
 
 ## Mídias e Materiais
 * **Fotos e Legendas:**
-  * `fotos/apresentando_maquete_iot.jpg`: Demonstração da interface web e controle da maquete para os visitantes.
+  * `fotos/apresentando_maquete_iot.jpeg`: Demonstração da interface web e controle da maquete para os visitantes.
 
 </div>
